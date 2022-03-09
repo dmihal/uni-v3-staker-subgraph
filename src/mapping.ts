@@ -1,4 +1,4 @@
-import { BigInt } from "@graphprotocol/graph-ts"
+import { BigInt, ByteArray, Bytes, crypto, log } from "@graphprotocol/graph-ts"
 import {
   UniV3Staker,
   DepositTransferred,
@@ -8,62 +8,30 @@ import {
   TokenStaked,
   TokenUnstaked
 } from "../generated/UniV3Staker/UniV3Staker"
-import { ExampleEntity } from "../generated/schema"
+import { Incentive } from "../generated/schema"
 
 export function handleDepositTransferred(event: DepositTransferred): void {
-  // Entities can be loaded from the store using a string ID; this ID
-  // needs to be unique across all entities of the same type
-  let entity = ExampleEntity.load(event.transaction.from.toHex())
-
-  // Entities only exist after they have been saved to the store;
-  // `null` checks allow to create entities on demand
-  if (!entity) {
-    entity = new ExampleEntity(event.transaction.from.toHex())
-
-    // Entity fields can be set using simple assignments
-    entity.count = BigInt.fromI32(0)
-  }
-
-  // BigInt and BigDecimal math are supported
-  entity.count = entity.count + BigInt.fromI32(1)
-
-  // Entity fields can be set based on event parameters
-  entity.tokenId = event.params.tokenId
-  entity.oldOwner = event.params.oldOwner
-
-  // Entities can be written to the store with `.save()`
-  entity.save()
-
-  // Note: If a handler doesn't require existing field values, it is faster
-  // _not_ to load the entity from the store. Instead, create it fresh with
-  // `new Entity(...)`, set the fields that should be updated and save the
-  // entity back to the store. Fields that were not set or unset remain
-  // unchanged, allowing for partial updates to be applied.
-
-  // It is also possible to access smart contracts from mappings. For
-  // example, the contract that has emitted the event can be connected to
-  // with:
-  //
-  // let contract = Contract.bind(event.address)
-  //
-  // The following functions can then be called on this contract to access
-  // state variables and other data:
-  //
-  // - contract.claimReward(...)
-  // - contract.deposits(...)
-  // - contract.endIncentive(...)
-  // - contract.factory(...)
-  // - contract.getRewardInfo(...)
-  // - contract.incentives(...)
-  // - contract.maxIncentiveDuration(...)
-  // - contract.maxIncentiveStartLeadTime(...)
-  // - contract.nonfungiblePositionManager(...)
-  // - contract.onERC721Received(...)
-  // - contract.rewards(...)
-  // - contract.stakes(...)
 }
 
-export function handleIncentiveCreated(event: IncentiveCreated): void {}
+export function handleIncentiveCreated(event: IncentiveCreated): void {
+  let abiEncodedKey = new Uint8Array(160)
+  abiEncodedKey.set(event.params.rewardToken, 0 + 12)
+  abiEncodedKey.set(event.params.pool, 32 + 12)
+  abiEncodedKey.set(event.params.startTime.reverse(), 64 + (32 - event.params.startTime.length))
+  abiEncodedKey.set(event.params.endTime.reverse(), 96 + (32 - event.params.endTime.length))
+  abiEncodedKey.set(event.params.refundee, 128 + 12)
+  log.warning(Bytes.fromUint8Array(abiEncodedKey).toHex(), [])
+  let id = crypto.keccak256(Bytes.fromUint8Array(abiEncodedKey))
+
+  let incentive = new Incentive(id.toHex())
+  incentive.rewardToken = event.params.rewardToken
+  incentive.pool = event.params.pool
+  incentive.startTime = event.params.startTime
+  incentive.endTime = event.params.endTime
+  incentive.refundee = event.params.refundee
+  incentive.numDeposits = 0
+  incentive.save()
+}
 
 export function handleIncentiveEnded(event: IncentiveEnded): void {}
 

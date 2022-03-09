@@ -1,6 +1,9 @@
-type ExampleEntity @entity {
+type Incentive @entity {
   id: ID!
-  count: BigInt!
-  tokenId: BigInt! # uint256
-  oldOwner: Bytes! # address
+  rewardToken: Bytes!
+  pool: Bytes!
+  startTime: BigInt!
+  endTime: BigInt!
+  refundee: Bytes!
+  numDeposits: Int!
 }
